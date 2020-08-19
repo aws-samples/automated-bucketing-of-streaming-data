@@ -1,0 +1,158 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+    Stack that deploys two Lambda functions that execute Athena Queries to do the following - 
+      Function1 - Load new partitions to the SourceTable.  
+      Funtion2 - Copies the data to /curated and loads a new partion to TargetTable
+    Both functions are triggered by CloudWatch EventsStack that deploys a bucket which you can use as a target for your
+    
+Parameters:
+  S3BucketName: 
+    Type: String
+    ConstraintDescription: '[a-z0-9\-]+'
+    Description: >
+        S3 bucket name that will hold /raw and /curated folders
+  CuratedKeyPrefix: 
+    Type: String
+    Default: '/curated'
+    ConstraintDescription: '[A-Za-z0-9\-]+/'
+    Description: >
+        Prefix of new bucketed files that are written by Function2. This is the location of TargetTable without 's://<s3_bucket_name>' 
+        Without the trailing slash. For example, /curated
+  AthenaResultLocation: 
+    Type: String
+    ConstraintDescription: '[A-Za-z0-9\-]+/'
+    Description: >
+        Full S3 location where Athena will store query results in.
+        For example, s3://<s3_bucket_name>/athena_results
+  DatabaseName: 
+    Type: String
+    Default: 'mydatabase'
+    ConstraintDescription: '[A-Za-z0-9_]+'
+    Description: >
+        Data Catalog Database name that holds SourceTable and TargetTable
+  SourceTableName: 
+    Type: String
+    Default: 'SourceTable'
+    ConstraintDescription: '[A-Za-z0-9_]+'
+    Description: >
+        Source Table Name that points to raw data
+  TargetTableName: 
+    Type: String
+    Default: 'TargetTable'
+    ConstraintDescription: '[A-Za-z0-9_]+'
+    Description: >
+        Target Table name that points to curated data 
+  BucketingKey:
+    Type: String
+    Default: 'sensorID'
+    ConstraintDescription: '[A-Za-z0-9_]+'
+    Description: >
+        The column used as a bucketing key. The solution  supports a single bucketing key, to add more edit the lambda function.
+  BucketCount:
+    Type: Number
+    Default: 3
+    ConstraintDescription: '[0-9]+'
+    Description: >
+        Number of hive buckets to create within a partition. 
+        This has to be the same number that was used when creating TargetTable.
+
+Resources:
+    BucketingFn:
+        Type: AWS::Serverless::Function
+        Properties:
+            CodeUri: functions/
+            Handler: Bucketing.lambda_handler
+            Runtime: python3.8
+            Timeout: 900
+            Policies:
+            - Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - athena:StartQueryExecution
+                    - athena:GetQueryExecution
+                  Resource: '*'
+                - Effect: Allow
+                  Action:
+                    - s3:ListBucket
+                    - s3:GetBucketLocation
+                  Resource: !Sub "arn:aws:s3:::${S3BucketName}"
+                - Effect: Allow
+                  Action:
+                    - s3:PutObject
+                    - s3:GetObject
+                  Resource: !Sub "arn:aws:s3:::${S3BucketName}/*"
+                - Effect: Allow
+                  Action:
+                    - glue:CreatePartition
+                    - glue:GetDatabase
+                    - glue:GetTable
+                    - glue:BatchCreatePartition
+                    - glue:GetPartition
+                    - glue:GetPartitions
+                    - glue:CreateTable
+                    - glue:DeleteTable
+                    - glue:DeletePartition
+                  Resource: '*'
+            Environment:
+                Variables:
+                    SOURCE_TABLE: !Ref SourceTableName
+                    TARGET_TABLE: !Ref TargetTableName
+                    TARGET_TABLE_LOCATION: !Sub s3://${S3BucketName}${CuratedKeyPrefix}
+                    DATABASE: !Ref DatabaseName
+                    ATHENA_QUERY_RESULTS_LOCATION: !Ref AthenaResultLocation
+                    BUCKETING_KEY: !Ref  BucketingKey
+                    BUCKET_COUNT: !Ref  BucketCount
+            Events:
+              HourlyEvt:
+                Type: Schedule
+                Properties:
+                  Schedule: cron(1 * * * ? *)
+    LoadPartFn:
+        Type: AWS::Serverless::Function
+        Properties:
+            CodeUri: functions/
+            Handler: LoadPartition.lambda_handler
+            Runtime: python3.8
+            Timeout: 900
+            Policies:
+            - Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - athena:StartQueryExecution
+                    - athena:GetQueryExecution
+                  Resource: '*'
+                - Effect: Allow
+                  Action:
+                    - s3:ListBucket
+                    - s3:GetBucketLocation
+                  Resource: !Sub "arn:aws:s3:::${S3BucketName}"
+                - Effect: Allow
+                  Action:
+                    - s3:PutObject
+                    - s3:GetObject
+                  Resource: !Sub "arn:aws:s3:::${S3BucketName}/*"
+                - Effect: Allow
+                  Action:
+                    - glue:CreatePartition
+                    - glue:GetDatabase
+                    - glue:GetTable
+                    - glue:BatchCreatePartition
+                    - glue:GetPartition
+                    - glue:GetPartitions
+                    - glue:CreateTable
+                    - glue:DeleteTable
+                    - glue:DeletePartition
+                  Resource: '*'
+            Environment:
+                Variables:
+                    SOURCE_TABLE: !Ref SourceTableName
+                    DATABASE: !Ref DatabaseName
+                    ATHENA_QUERY_RESULTS_LOCATION: !Ref AthenaResultLocation
+            Events:
+              HourlyEvt:
+                Type: Schedule
+                Properties:
+                  Schedule: cron(1 * * * ? *)
