@@ -1,11 +1,11 @@
 # Automated Bucketing of Streaming Data
 
   
-This repository accompanies the Automated Bucketing of Streaming Data using Amazon Athena and AWS Lambda blog post. It contains an [AWS Serverless Application Model (AWS SAM)](https://aws.amazon.com/serverless/sam/) template that deploys two AWS Lambda functions; LoadPartiton and Bucketing functions.
+This repository accompanies the Automated Bucketing of Streaming Data using [Amazon Athena](https://aws.amazon.com/athena) and [AWS Lambda](https://aws.amazon.com/lambda) blog post. It contains an [AWS Serverless Application Model (AWS SAM)](https://aws.amazon.com/serverless/sam/) template that deploys two AWS Lambda functions; LoadPartiton and Bucketing functions.
 
 The [LoadPartition](./functions/LoadPartition.py) function, runs every hour and reads the new folder created under /raw folder and loads this folder as a new partition to the SourceTable. 
 
-The [Bucketing](./functions/Bucketing.py) function, runs every hour and copies previous hour's data from /raw to /curated using Create Table AS Select (CTAS). The copied data is a new sub-folder under /curated. The function will then load the new folder as a Partition to TargetTable.  
+The [Bucketing](./functions/Bucketing.py) function, runs every hour and copies previous hour's data from /raw to /curated by executing [Create Table AS Select (CTAS)](https://docs.aws.amazon.com/athena/latest/ug/ctas.html) query on Amazon Athena. The copied data is a new sub-folder under /curated. The function will then load the new folder as a Partition to TargetTable.  
 
 ```bash
 ├── README.MD <-- This instructions file
