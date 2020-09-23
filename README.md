@@ -1,7 +1,7 @@
 # Automated Bucketing of Streaming Data
 
   
-This repository accompanies the [Automating bucketing of streaming data using Amazon Athena and AWS Lambda](https://aws-preview.aka.amazon.com/blogs/big-data/automating-bucketing-of-streaming-data-using-amazon-athena-and-aws-lambda/) blog post. It contains an [AWS Serverless Application Model (AWS SAM)](https://aws.amazon.com/serverless/sam/) template that deploys two [AWS Lambda](https://aws.amazon.com/lambda) functions; LoadPartiton and Bucketing functions.
+This repository accompanies the [Automating bucketing of streaming data using Amazon Athena and AWS Lambda](https://aws.amazon.com/blogs/big-data/automating-bucketing-of-streaming-data-using-amazon-athena-and-aws-lambda/) blog post. It contains an [AWS Serverless Application Model (AWS SAM)](https://aws.amazon.com/serverless/sam/) template that deploys two [AWS Lambda](https://aws.amazon.com/lambda) functions; LoadPartiton and Bucketing functions.
 
 The [LoadPartition](./functions/LoadPartition.py) function, runs every hour and reads the new folder created under /raw folder and loads this folder as a new partition to the SourceTable. 
 
